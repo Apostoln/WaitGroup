@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{Arc, Mutex, Condvar};
+use std::sync::{Arc, Condvar, Mutex};
 
 pub struct WaitGroup(Arc<WaitGroupImpl>);
 
