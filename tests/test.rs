@@ -1,5 +1,5 @@
 use std::thread;
-use wait_group::{WaitGroup, SmartWaitGroup};
+use wait_group::{WaitGroup, SmartWaitGroup, GoWaitGroup};
 
 const ATTEMPTS: usize = 100;
 
@@ -60,6 +60,39 @@ fn smart_wait_group() {
 
         // Wait until all N threads are finished
         waiter.wait();
+        flag = Some(true);
+
+        // Assure threads are finished for avoiding false-positive result
+        for handler in thread_handlers {
+            handler.join().unwrap();
+        }
+
+        assert_eq!(flag, Some(true));
+    }
+}
+
+#[test]
+fn go_wait_group() {
+    for _ in 0..ATTEMPTS {
+        let mut flag = None; //bool
+
+        let wg = GoWaitGroup::new();
+        const N: u64 = 100;
+        wg.add(N as usize);
+
+        // Spawn N threads and set flag to false;
+        let thread_handlers = (0..N)
+            .map(|_| {
+                let wg = wg.clone();
+                thread::spawn(move || {
+                    flag = Some(false);
+                    wg.done();
+                })
+            })
+            .collect::<Vec<_>>();
+
+        // Wait until all N threads are finished
+        wg.wait();
         flag = Some(true);
 
         // Assure threads are finished for avoiding false-positive result
