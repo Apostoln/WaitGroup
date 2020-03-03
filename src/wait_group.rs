@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::Arc;
 
 use crate::wait_group_impl::WaitGroupImpl;
 

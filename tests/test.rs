@@ -85,7 +85,7 @@ fn go_wait_group() {
         let mut counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
 
         let wg = GoWaitGroup::new();
-        wg.add(THREADS_NUMBER);
+        wg.add(THREADS_NUMBER as isize);
         // Spawn N threads and set flag to false;
         let thread_handlers = (0..THREADS_NUMBER)
             .map(|_| {

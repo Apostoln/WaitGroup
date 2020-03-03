@@ -1,4 +1,4 @@
-use crate::wait_group_impl::WaitGroupImpl;
+use crate::wait_group_impl::{WaitGroupImpl, WaitGroupError};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -15,8 +15,13 @@ impl GoWaitGroup {
         self.inner.wait();
     }
 
-    pub fn add(&self, delta: usize) {
-        self.inner.add_count(delta);
+    #[must_use]
+    pub fn try_wait(&self) -> Result<(), WaitGroupError>{
+        self.inner.try_wait()
+    }
+
+    pub fn add(&self, delta: isize) {
+        self.inner.add_count_unchecked(delta);
     }
 
     pub fn done(&self) {
