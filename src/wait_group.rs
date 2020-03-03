@@ -1,58 +1,38 @@
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
 
-/// This synchronization primitive enables one thread to wait the others threads.
-pub struct WaitGroup(Arc<WaitGroupImpl>);
+use crate::wait_group_impl::WaitGroupImpl;
 
-struct WaitGroupImpl {
-    counter: Mutex<usize>,
-    condition: Condvar,
+/// This synchronization primitive enables one thread to wait the others threads.
+pub struct WaitGroup {
+    inner: Arc<WaitGroupImpl>,
 }
 
 impl WaitGroup {
     pub fn new() -> WaitGroup {
-        WaitGroup(Arc::new(WaitGroupImpl {
-            counter: Mutex::new(0),
-            condition: Condvar::new(),
-        }))
+        WaitGroup { inner: Arc::new(WaitGroupImpl::new()) }
     }
 
     pub fn wait(&self) {
-        let mut count = self.0.counter.lock().unwrap();
-        while *count > 0 {
-            count = self.0.condition.wait(count).unwrap();
-        }
+        self.inner.wait();
     }
 
     fn increment_counter(&self) {
-        let mut count = self.0.counter.lock().unwrap();
-        *count += 1;
-        self.notify_if_empty(*count);
+        self.inner.increment_counter();
     }
 
     fn done(&self) {
-        let mut count = self.0.counter.lock().unwrap();
-        if *count > 0 {
-            *count -= 1;
-            self.notify_if_empty(*count);
-        }
+        self.inner.done();
     }
 
-    fn notify_if_empty(&self, count: usize) {
-        if count == 0 {
-            self.0.condition.notify_all();
-        }
-    }
-
-    // todo unsafe?
-    pub fn raw_clone(&self) -> Self {
-        WaitGroup(Arc::clone(&self.0))
+    pub unsafe fn raw_clone(&self) -> Self {
+        WaitGroup { inner: Arc::clone(&self.inner) }
     }
 }
 
 impl Clone for WaitGroup {
     fn clone(&self) -> Self {
-        let wg = WaitGroup(Arc::clone(&self.0));
+        let wg = WaitGroup { inner: Arc::clone(&self.inner) };
         wg.increment_counter();
         wg
     }
@@ -66,7 +46,6 @@ impl Drop for WaitGroup {
 
 impl fmt::Debug for WaitGroup {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let count = self.0.counter.lock().unwrap();
-        write!(f, "WaitGroup {{ count {:?} }}", *count)
+        self.fmt(f)
     }
 }

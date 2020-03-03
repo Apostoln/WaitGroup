@@ -1,34 +1,38 @@
 use std::thread;
 use wait_group::{WaitGroup, SmartWaitGroup};
 
+const ATTEMPTS: usize = 100;
+
 #[test]
 fn wait_group() {
-    let mut flag = None; //bool
+    for _ in 0..ATTEMPTS {
+        let mut flag = None; //bool
 
-    let wg = WaitGroup::new();
-    const N: u64 = 100;
+        let wg = WaitGroup::new();
+        const N: u64 = 100;
 
-    // Spawn N threads and set flag to false;
-    let thread_handlers = (0..N)
-        .map(|_| {
-            let wg = wg.clone();
-            thread::spawn(move || {
-                flag = Some(false);
-                drop(wg)
+        // Spawn N threads and set flag to false;
+        let thread_handlers = (0..N)
+            .map(|_| {
+                let wg = wg.clone();
+                thread::spawn(move || {
+                    flag = Some(false);
+                    drop(wg)
+                })
             })
-        })
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
-    // Wait until all N threads are finished
-    wg.wait();
-    flag = Some(true);
+        // Wait until all N threads are finished
+        wg.wait();
+        flag = Some(true);
 
-    // Assure threads are finished for avoiding false-positive result
-    for handler in thread_handlers {
-        handler.join().unwrap();
+        // Assure threads are finished for avoiding false-positive result
+        for handler in thread_handlers {
+            handler.join().unwrap();
+        }
+
+        assert_eq!(flag, Some(true));
     }
-
-    assert_eq!(flag, Some(true));
 
     // Methods increment_counter() and done() are private,
     // so we can't invalidate invariants for inner counter.
@@ -37,30 +41,32 @@ fn wait_group() {
 
 #[test]
 fn smart_wait_group() {
-    let mut flag = None; //bool
+    for _ in 0..ATTEMPTS {
+        let mut flag = None; //bool
 
-    let wg = SmartWaitGroup::new();
-    let waiter = wg.waiter();
-    const N: u64 = 100;
-    // Spawn N threads and set flag to false;
-    let thread_handlers = (0..N)
-        .map(|_| {
-            let doer = wg.doer();
-            thread::spawn(move || {
-                flag = Some(false);
-                drop(doer)
+        let wg = SmartWaitGroup::new();
+        let waiter = wg.waiter();
+        const N: u64 = 100;
+        // Spawn N threads and set flag to false;
+        let thread_handlers = (0..N)
+            .map(|_| {
+                let doer = wg.doer();
+                thread::spawn(move || {
+                    flag = Some(false);
+                    drop(doer)
+                })
             })
-        })
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
-    // Wait until all N threads are finished
-    waiter.wait();
-    flag = Some(true);
+        // Wait until all N threads are finished
+        waiter.wait();
+        flag = Some(true);
 
-    // Assure threads are finished for avoiding false-positive result
-    for handler in thread_handlers {
-        handler.join().unwrap();
+        // Assure threads are finished for avoiding false-positive result
+        for handler in thread_handlers {
+            handler.join().unwrap();
+        }
+
+        assert_eq!(flag, Some(true));
     }
-
-    assert_eq!(flag, Some(true));
 }
