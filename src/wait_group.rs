@@ -43,6 +43,11 @@ impl WaitGroup {
             self.0.condition.notify_all();
         }
     }
+
+    // todo unsafe?
+    pub fn raw_clone(&self) -> Self {
+        WaitGroup(Arc::clone(&self.0))
+    }
 }
 
 impl Clone for WaitGroup {
