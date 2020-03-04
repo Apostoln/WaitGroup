@@ -1,5 +1,5 @@
 use crate::wait_group_impl::WaitGroupImpl;
-use crate::{Result, WaitGroupError};
+use crate::Result;
 use std::sync::Arc;
 
 #[derive(Clone)]

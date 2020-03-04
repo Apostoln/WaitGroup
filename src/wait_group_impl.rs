@@ -1,9 +1,7 @@
-use std::convert::TryFrom;
 use std::fmt;
 use std::sync::{Condvar, Mutex};
 
 use crate::{Result, WaitGroupError};
-use std::ops::Deref;
 
 pub struct WaitGroupImpl {
     counter: Mutex<usize>,

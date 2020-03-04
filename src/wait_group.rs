@@ -2,7 +2,6 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::wait_group_impl::WaitGroupImpl;
-use crate::WaitGroupError;
 
 pub struct WaitGroup {
     inner: Arc<WaitGroupImpl>,
@@ -52,6 +51,6 @@ impl Drop for WaitGroup {
 
 impl fmt::Debug for WaitGroup {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt(f)
+        self.inner.fmt(f)
     }
 }
