@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::wait_group_impl::WaitGroupImpl;
 
+#[derive(Clone)]
 pub struct SmartWaitGroup {
     inner: Arc<WaitGroupImpl>,
 }
