@@ -27,7 +27,7 @@ pub struct Doer {
 }
 impl Doer {
     fn new(wait_group: Arc<WaitGroupImpl>) -> Self {
-        wait_group.increment_count();
+        wait_group.increment();
         Doer { wait_group }
     }
 

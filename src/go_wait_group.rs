@@ -20,7 +20,7 @@ impl GoWaitGroup {
 
     #[must_use]
     pub fn try_add(&self, delta: isize) -> Result<()> {
-        self.inner.try_add_count(delta)
+        self.inner.try_add(delta)
     }
 
     pub fn add(&self, delta: isize) {

@@ -3,6 +3,7 @@ use std::fmt;
 use std::sync::{Condvar, Mutex};
 
 use crate::{Result, WaitGroupError};
+use std::ops::Deref;
 
 pub struct WaitGroupImpl {
     counter: Mutex<usize>,
@@ -24,15 +25,15 @@ impl WaitGroupImpl {
         }
     }
 
-    pub fn increment_count(&self) {
-        self.add_count_unchecked(1);
+    pub fn increment(&self) {
+        self.add_unchecked(1);
     }
 
-    pub fn add_count(&self, delta: isize) {
-        self.try_add_count(delta).unwrap();
+    pub fn add(&self, delta: isize) {
+        self.try_add(delta).unwrap();
     }
 
-    pub fn try_add_count(&self, delta: isize) -> Result<()> {
+    pub fn try_add(&self, delta: isize) -> Result<()> {
         let mut count = self.counter.lock().unwrap();
         let res = *count as isize + delta;
         if res < 0 {
@@ -44,13 +45,13 @@ impl WaitGroupImpl {
         }
     }
 
-    pub fn add_count_unchecked(&self, delta: usize) {
+    pub fn add_unchecked(&self, delta: usize) {
         let mut count = self.counter.lock().unwrap();
         *count += delta;
     }
 
     pub fn try_done(&self) -> Result<()> {
-        self.try_add_count(-1)
+        self.try_add(-1)
     }
 
     pub fn done(&self) {
@@ -61,6 +62,10 @@ impl WaitGroupImpl {
         if count == 0 {
             self.condition.notify_all();
         }
+    }
+    
+    pub fn counter(&self) -> usize {
+        *self.counter.lock().unwrap()
     }
 }
 

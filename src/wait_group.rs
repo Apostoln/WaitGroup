@@ -20,7 +20,7 @@ impl WaitGroup {
     }
 
     fn increment_counter(&self) {
-        self.inner.increment_count();
+        self.inner.increment();
     }
 
     fn done(&self) {
