@@ -17,6 +17,10 @@ impl SmartWaitGroup {
         Doer::new(Arc::clone(&self.inner))
     }
 
+    pub fn unique_doer(&self) -> Option<Doer> {
+        Doer::unique(Arc::clone(&self.inner))
+    }
+
     pub fn waiter(&self) -> Waiter {
         Waiter::new(Arc::clone(&self.inner))
     }
@@ -37,6 +41,15 @@ impl Doer {
     fn new(wait_group: Arc<WaitGroupImpl>) -> Self {
         wait_group.increment();
         Doer { wait_group }
+    }
+
+    fn unique(wait_group: Arc<WaitGroupImpl>) -> Option<Self> {
+        if wait_group.increment_if_empty() {
+            Some(Doer { wait_group })
+        }
+        else {
+            None
+        }
     }
 
     fn done(&self) {

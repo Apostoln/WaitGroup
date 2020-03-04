@@ -33,6 +33,9 @@ impl WaitGroup {
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }
+
+    //todo add analogue for unique_doer() in SmartWaitGroup
+    //todo smth like `pub fn clone_unique(&self) -> Option(Self)`
 }
 
 impl Clone for WaitGroup {

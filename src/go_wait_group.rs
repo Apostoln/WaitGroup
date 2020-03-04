@@ -43,4 +43,6 @@ impl GoWaitGroup {
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }
+
+    //todo add analogue for unique_doer() in SmartWaitGroup
 }

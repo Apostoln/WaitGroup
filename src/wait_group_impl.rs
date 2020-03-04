@@ -23,6 +23,19 @@ impl WaitGroupImpl {
         }
     }
 
+    pub fn add_if_empty(&self, delta: usize) -> bool {
+        let mut count = self.counter.lock().unwrap();
+        if *count != 0 {
+            return false;
+        }
+        *count += delta;
+        true
+    }
+
+    pub fn increment_if_empty(&self) -> bool {
+        self.add_if_empty(1)
+    }
+
     pub fn increment(&self) {
         self.add_unchecked(1);
     }
