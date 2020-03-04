@@ -18,6 +18,10 @@ impl WaitGroup {
         self.inner.wait();
     }
 
+    pub fn counter(&self) -> usize {
+        self.inner.counter()
+    }
+
     fn increment_counter(&self) {
         self.inner.increment();
     }

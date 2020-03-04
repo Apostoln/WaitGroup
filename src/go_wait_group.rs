@@ -36,6 +36,10 @@ impl GoWaitGroup {
         self.try_done().unwrap();
     }
 
+    pub fn counter(&self) -> usize {
+        self.inner.counter()
+    }
+
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }

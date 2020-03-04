@@ -21,6 +21,10 @@ impl SmartWaitGroup {
         Waiter::new(Arc::clone(&self.inner))
     }
 
+    pub fn counter(&self) -> usize {
+        self.inner.counter()
+    }
+
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }
