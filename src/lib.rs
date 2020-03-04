@@ -1,5 +1,5 @@
 pub use go_wait_group::GoWaitGroup;
-pub use smart_wait_group::SmartWaitGroup;
+pub use smart_wait_group::{SmartWaitGroup, Doer, Waiter};
 pub use wait_group::WaitGroup;
 pub use wait_group_error::{Result, WaitGroupError};
 
