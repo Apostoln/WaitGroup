@@ -18,15 +18,11 @@ impl WaitGroup {
     }
 
     fn increment_counter(&self) {
-        self.inner.increment_counter();
+        self.inner.increment_count();
     }
 
     fn done(&self) {
         self.inner.done();
-    }
-
-    pub unsafe fn raw_clone(&self) -> Self {
-        WaitGroup { inner: Arc::clone(&self.inner) }
     }
 }
 
@@ -40,7 +36,9 @@ impl Clone for WaitGroup {
 
 impl Drop for WaitGroup {
     fn drop(&mut self) {
-        self.done();
+        if let None = Arc::get_mut(&mut self.inner) {
+            self.done();
+        }
     }
 }
 

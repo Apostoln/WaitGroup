@@ -16,15 +16,20 @@ impl GoWaitGroup {
     }
 
     #[must_use]
-    pub fn try_wait(&self) -> Result<(), WaitGroupError>{
-        self.inner.try_wait()
+    pub fn try_add(&self, delta: isize) -> Result<(), WaitGroupError> {
+        self.inner.try_add_count(delta)
     }
 
     pub fn add(&self, delta: isize) {
-        self.inner.add_count_unchecked(delta);
+        self.try_add(delta).unwrap();
+    }
+
+    #[must_use]
+    pub fn try_done(&self) -> Result<(), WaitGroupError>{
+        self.inner.try_done()
     }
 
     pub fn done(&self) {
-        self.inner.done();
+        self.try_done().unwrap();
     }
 }
