@@ -1,5 +1,7 @@
-use crate::wait_group_impl::WaitGroupImpl;
 use std::sync::Arc;
+
+use crate::wait_group_impl::WaitGroupImpl;
+use crate::WaitGroupError;
 
 pub struct SmartWaitGroup {
     inner: Arc<WaitGroupImpl>,

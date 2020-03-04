@@ -2,23 +2,7 @@ use std::convert::TryFrom;
 use std::fmt;
 use std::sync::{Condvar, Mutex};
 
-pub enum WaitGroupError {
-    NegativeCounter(isize),
-    Unexpected(String),
-}
-
-impl fmt::Debug for WaitGroupError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            WaitGroupError::NegativeCounter(counter) => {
-                write!(f, "Counter is negative: {}", counter)
-            }
-            WaitGroupError::Unexpected(description) => {
-                write!(f, "Unexpected WaitGroupError: {}", description)
-            }
-        }
-    }
-}
+use crate::{Result, WaitGroupError};
 
 pub struct WaitGroupImpl {
     counter: Mutex<usize>,
@@ -48,7 +32,7 @@ impl WaitGroupImpl {
         self.try_add_count(delta).unwrap();
     }
 
-    pub fn try_add_count(&self, delta: isize) -> Result<(), WaitGroupError>{
+    pub fn try_add_count(&self, delta: isize) -> Result<()>{
         let mut count = self.counter.lock().unwrap();
         let res = *count as isize + delta;
         if res < 0 {
@@ -66,7 +50,7 @@ impl WaitGroupImpl {
         *count += delta;
     }
 
-    pub fn try_done(&self) -> Result<(), WaitGroupError> {
+    pub fn try_done(&self) -> Result<()> {
         self.try_add_count(-1)
     }
 

@@ -2,6 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::wait_group_impl::WaitGroupImpl;
+use crate::WaitGroupError;
 
 /// This synchronization primitive enables one thread to wait the others threads.
 pub struct WaitGroup {
