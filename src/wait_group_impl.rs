@@ -32,13 +32,12 @@ impl WaitGroupImpl {
         self.try_add_count(delta).unwrap();
     }
 
-    pub fn try_add_count(&self, delta: isize) -> Result<()>{
+    pub fn try_add_count(&self, delta: isize) -> Result<()> {
         let mut count = self.counter.lock().unwrap();
         let res = *count as isize + delta;
         if res < 0 {
             Err(WaitGroupError::NegativeCounter(res))
-        }
-        else {
+        } else {
             *count = res as usize;
             self.notify_if_empty(*count);
             Ok(())

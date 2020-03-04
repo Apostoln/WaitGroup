@@ -4,14 +4,15 @@ use std::sync::Arc;
 use crate::wait_group_impl::WaitGroupImpl;
 use crate::WaitGroupError;
 
-/// This synchronization primitive enables one thread to wait the others threads.
 pub struct WaitGroup {
     inner: Arc<WaitGroupImpl>,
 }
 
 impl WaitGroup {
     pub fn new() -> WaitGroup {
-        WaitGroup { inner: Arc::new(WaitGroupImpl::new()) }
+        WaitGroup {
+            inner: Arc::new(WaitGroupImpl::new()),
+        }
     }
 
     pub fn wait(&self) {
@@ -29,7 +30,9 @@ impl WaitGroup {
 
 impl Clone for WaitGroup {
     fn clone(&self) -> Self {
-        let wg = WaitGroup { inner: Arc::clone(&self.inner) };
+        let wg = WaitGroup {
+            inner: Arc::clone(&self.inner),
+        };
         wg.increment_counter();
         wg
     }

@@ -9,7 +9,9 @@ pub struct GoWaitGroup {
 
 impl GoWaitGroup {
     pub fn new() -> Self {
-        GoWaitGroup { inner: Arc::new(WaitGroupImpl::new()) }
+        GoWaitGroup {
+            inner: Arc::new(WaitGroupImpl::new()),
+        }
     }
 
     pub fn wait(&self) {
@@ -26,7 +28,7 @@ impl GoWaitGroup {
     }
 
     #[must_use]
-    pub fn try_done(&self) -> Result<()>{
+    pub fn try_done(&self) -> Result<()> {
         self.inner.try_done()
     }
 
