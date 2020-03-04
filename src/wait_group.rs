@@ -26,6 +26,10 @@ impl WaitGroup {
     fn done(&self) {
         self.inner.done();
     }
+
+    unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
+        Arc::clone(&self.inner)
+    }
 }
 
 impl Clone for WaitGroup {

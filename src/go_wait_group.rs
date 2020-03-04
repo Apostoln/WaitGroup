@@ -35,4 +35,8 @@ impl GoWaitGroup {
     pub fn done(&self) {
         self.try_done().unwrap();
     }
+
+    unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
+        Arc::clone(&self.inner)
+    }
 }

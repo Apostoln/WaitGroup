@@ -20,6 +20,10 @@ impl SmartWaitGroup {
     pub fn waiter(&self) -> Waiter {
         Waiter::new(Arc::clone(&self.inner))
     }
+
+    unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
+        Arc::clone(&self.inner)
+    }
 }
 
 pub struct Doer {
