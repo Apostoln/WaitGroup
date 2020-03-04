@@ -19,6 +19,7 @@ fn wait_group() {
         // Spawn N threads and increment the counter
         let thread_handlers = (0..THREADS_NUMBER)
             .map(|_| {
+                let unexpected_clone_of_wg = wg.clone();
                 let wg = wg.clone();
                 let counter = Arc::clone(&counter);
                 thread::spawn(move || {
@@ -47,7 +48,7 @@ fn wait_group() {
 }
 
 #[test]
-fn smart_wait_group() {
+fn smart_wg() {
     for _ in 0..ATTEMPTS {
         let mut counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
 
@@ -56,6 +57,7 @@ fn smart_wait_group() {
         // Spawn N threads and set flag to false;
         let thread_handlers = (0..THREADS_NUMBER)
             .map(|_| {
+                let unexpected_doer = wg.doer();
                 let doer = wg.doer();
                 let counter = Arc::clone(&counter);
                 thread::spawn(move || {
@@ -80,7 +82,7 @@ fn smart_wait_group() {
 }
 
 #[test]
-fn go_wait_group() {
+fn go_wg() {
     for _ in 0..ATTEMPTS {
         let mut counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
 
@@ -108,6 +110,40 @@ fn go_wait_group() {
             handler.join().unwrap();
         }
 
+        assert_eq!(counter.load(Ordering::SeqCst), EXPECTED_AFTER_JOINING);
+    }
+}
+
+#[test]
+#[should_panic]
+fn go_wg_negative_counter() {
+    for _ in 0..ATTEMPTS {
+        let mut counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
+
+        let wg = GoWaitGroup::new();
+        let INCORRECT_THREADS_NUMBER = THREADS_NUMBER - 1;
+        wg.add(INCORRECT_THREADS_NUMBER as isize);
+        // Spawn N threads and set flag to false;
+        let thread_handlers = (0..THREADS_NUMBER)
+            .map(|_| {
+                let wg = wg.clone();
+                let counter = Arc::clone(&counter);
+                thread::spawn(move || {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    wg.done();
+                })
+            })
+            .collect::<Vec<_>>();
+
+        // Wait until all N threads are finished
+        wg.wait();
+
+        // Assure threads are finished for avoiding false-positive result
+        for handler in thread_handlers {
+            handler.join().unwrap(); //panic on the last thread here
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), EXPECTED_AFTER_WAITING);
+        counter.store(EXPECTED_AFTER_JOINING, Ordering::SeqCst);
         assert_eq!(counter.load(Ordering::SeqCst), EXPECTED_AFTER_JOINING);
     }
 }
