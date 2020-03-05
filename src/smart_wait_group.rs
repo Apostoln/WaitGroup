@@ -85,3 +85,29 @@ impl Clone for Waiter {
         Waiter::new(Arc::clone(&self.wait_group))
     }
 }
+
+// todo come up with a good name
+// todo impl MultiWaitGroup
+// todo impl try_switch()
+pub fn switch(first: &SmartWaitGroup, second: &SmartWaitGroup) -> Doer {
+    // Ensure that first and second are differ (not an identical allocations)
+    // for avoiding deadlock
+    assert!(!Arc::ptr_eq(&first.inner, &second.inner));
+    let doer = first.doer();
+    second.waiter().wait();
+    doer
+}
+
+// todo come up with a good name
+// todo impl MultiWaitGroup
+// todo impl try_switch_unique()
+pub fn switch_unique(first: &SmartWaitGroup, second: &SmartWaitGroup) -> Option<Doer> {
+    // Ensure that first and second are differ (not an identical allocations)
+    // for avoiding deadlock
+    assert!(!Arc::ptr_eq(&first.inner, &second.inner));
+    let doer = first.unique_doer();
+    if let Some(_) = doer {
+        second.waiter().wait();
+    }
+    doer
+}
