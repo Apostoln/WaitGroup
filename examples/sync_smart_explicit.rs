@@ -24,11 +24,13 @@ impl Context {
 
 fn normal_task(c: Arc<Context> ) {
     {
-        let normal_dor = c.normal_wg.switch_wait_do(&c.special_wg);
+        c.special_wg.waiter().wait();
+        let normal_doer = c.normal_wg.doer();
         c.resource_counter.fetch_add(1, Ordering::SeqCst);
     }
     if c.resource_counter.load(Ordering::SeqCst) >= 60 {
-        if let Some(doer) = c.special_wg.switch_unique(&c.normal_wg) {
+        if let Some(doer) = c.special_wg.unique_doer() {
+            c.normal_wg.waiter().wait();
             special_task(c, doer);
         }
     }
@@ -36,6 +38,7 @@ fn normal_task(c: Arc<Context> ) {
 
 fn special_task(c: Arc<Context>, doer: Doer) {
     c.resource_counter.store(0, Ordering::SeqCst);
+    //drop(doer) implicit call
 }
 
 fn task(c: Arc<Context>) {
