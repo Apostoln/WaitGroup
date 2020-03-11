@@ -10,19 +10,23 @@ fn process_counter(counter: Arc<AtomicIsize>, doer: Doer) {
     //drop(doer) implicit call
 }
 
-fn main() {
-    let counter = Arc::new(AtomicIsize::new(0));
-
-    let wg = SmartWaitGroup::new();
-
-    // Spawn 100 threads and increment the counter
+fn spawn_threads(counter: Arc<AtomicIsize>, doer: Doer) {
     for _ in 0..100 {
-        let doer = wg.doer();
+        let doer = doer.clone();
         let counter = Arc::clone(&counter);
         thread::spawn(move || process_counter(counter, doer));
     }
+}
+
+fn main() {
+    let counter = Arc::new(AtomicIsize::new(0));
+
+    let (waiter, doer) = SmartWaitGroup::splitted();
+
+    // Spawn 100 threads and increment the counter
+    spawn_threads(Arc::clone(&counter), doer);
 
     // Wait until all 100 threads are finished
-    wg.waiter().wait();
+    waiter.wait();
     println!("{}", counter.load(Ordering::SeqCst)); //100
 }

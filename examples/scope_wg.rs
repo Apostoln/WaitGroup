@@ -15,14 +15,14 @@ fn main() {
 
     let wg = WaitGroup::new();
 
-    // Spawn N threads and process the counter
+    // Spawn 100 threads and process the counter
     for _ in 0..100 {
         let wg = wg.clone();
         let counter = Arc::clone(&counter);
         thread::spawn(move || process_counter(counter, wg));
     }
 
-    // Wait until all N threads are finished
+    // Wait until all 100 threads are finished
     wg.wait();
     println!("{}", counter.load(Ordering::SeqCst)); //100
 }

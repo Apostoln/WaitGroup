@@ -18,7 +18,7 @@ impl SmartWaitGroup {
         }
     }
 
-    pub fn waiter_doer() -> (Waiter, Doer) {
+    pub fn splitted() -> (Waiter, Doer) {
         Self::new().split()
     }
 
@@ -34,6 +34,7 @@ impl SmartWaitGroup {
         Doer::unique(Arc::clone(&self.inner))
     }
 
+    //todo must use
     pub fn waiter(&self) -> Waiter {
         Waiter::new(Arc::clone(&self.inner))
     }
