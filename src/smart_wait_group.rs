@@ -34,7 +34,6 @@ impl SmartWaitGroup {
         Doer::unique(Arc::clone(&self.inner))
     }
 
-    //todo must use
     pub fn waiter(&self) -> Waiter {
         Waiter::new(Arc::clone(&self.inner))
     }
@@ -65,7 +64,7 @@ impl SmartWaitGroup {
             Order::WaiterDoer => self.switch_wait_do(second),
         }
     }
-    
+
     pub fn switch_unique(&self, second: &SmartWaitGroup) -> Option<Doer> {
         // Ensure that first and second are differ (not an identical allocations)
         // for avoiding deadlock
@@ -82,6 +81,7 @@ impl SmartWaitGroup {
     }
 }
 
+#[must_use]
 pub struct Doer {
     wait_group: Arc<WaitGroupImpl>,
 }
@@ -117,6 +117,7 @@ impl Clone for Doer {
     }
 }
 
+#[must_use]
 pub struct Waiter {
     wait_group: Arc<WaitGroupImpl>,
 }
