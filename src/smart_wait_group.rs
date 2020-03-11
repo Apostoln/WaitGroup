@@ -18,6 +18,14 @@ impl SmartWaitGroup {
         }
     }
 
+    pub fn waiter_doer() -> (Waiter, Doer) {
+        Self::new().split()
+    }
+
+    pub fn split(self) -> (Waiter, Doer) {
+        (self.waiter(), self.doer())
+    }
+
     pub fn doer(&self) -> Doer {
         Doer::new(Arc::clone(&self.inner))
     }
