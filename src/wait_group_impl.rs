@@ -44,6 +44,7 @@ impl WaitGroupImpl {
         self.try_add(delta).unwrap();
     }
 
+    #[must_use]
     pub fn try_add(&self, delta: isize) -> Result<()> {
         let mut count = self.counter.lock().unwrap();
         let res = *count as isize + delta;
@@ -61,6 +62,7 @@ impl WaitGroupImpl {
         *count += delta;
     }
 
+    #[must_use]
     pub fn try_done(&self) -> Result<()> {
         self.try_add(-1)
     }
