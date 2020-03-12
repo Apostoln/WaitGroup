@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use crate::wait_group_impl::WaitGroupImpl;
 
-pub struct WaitGroup {
+pub struct GuardWaitGroup {
     inner: Arc<WaitGroupImpl>,
 }
 
-impl WaitGroup {
-    pub fn new() -> WaitGroup {
-        WaitGroup {
+impl GuardWaitGroup {
+    pub fn new() -> GuardWaitGroup {
+        GuardWaitGroup {
             inner: Arc::new(WaitGroupImpl::new()),
         }
     }
@@ -38,9 +38,9 @@ impl WaitGroup {
     //todo smth like `pub fn clone_unique(&self) -> Option(Self)`
 }
 
-impl Clone for WaitGroup {
+impl Clone for GuardWaitGroup {
     fn clone(&self) -> Self {
-        let wg = WaitGroup {
+        let wg = GuardWaitGroup {
             inner: Arc::clone(&self.inner),
         };
         wg.increment_counter();
@@ -48,7 +48,7 @@ impl Clone for WaitGroup {
     }
 }
 
-impl Drop for WaitGroup {
+impl Drop for GuardWaitGroup {
     fn drop(&mut self) {
         if let None = Arc::get_mut(&mut self.inner) {
             self.done();
@@ -56,7 +56,7 @@ impl Drop for WaitGroup {
     }
 }
 
-impl fmt::Debug for WaitGroup {
+impl fmt::Debug for GuardWaitGroup {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.inner.fmt(f)
     }

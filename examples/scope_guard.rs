@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::atomic::Ordering::SeqCst;
 use std::thread;
 
-use wait_group::WaitGroup;
+use wait_group::GuardWaitGroup;
 
-fn process_counter(counter: Arc<AtomicIsize>, wg: WaitGroup) {
+fn process_counter(counter: Arc<AtomicIsize>, wg: GuardWaitGroup) {
     counter.fetch_add(1, Ordering::SeqCst);
     //drop(wg) implicit call
 }
@@ -13,7 +13,7 @@ fn process_counter(counter: Arc<AtomicIsize>, wg: WaitGroup) {
 fn main() {
     let counter = Arc::new(AtomicIsize::new(0));
 
-    let wg = WaitGroup::new();
+    let wg = GuardWaitGroup::new();
 
     // Spawn 100 threads and process the counter
     for _ in 0..100 {
