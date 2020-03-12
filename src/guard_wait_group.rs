@@ -27,8 +27,7 @@ impl GuardWaitGroup {
             Some(GuardWaitGroup {
                 inner: Arc::clone(&self.inner),
             })
-        }
-        else {
+        } else {
             None
         }
     }

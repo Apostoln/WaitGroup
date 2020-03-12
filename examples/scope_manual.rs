@@ -1,6 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicIsize, Ordering};
-use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
 use std::thread;
 
 use wait_group::ManualWaitGroup;

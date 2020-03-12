@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Arc;
 use std::thread;
-use wait_group::{ManualWaitGroup, SmartWaitGroup, GuardWaitGroup};
+use wait_group::{GuardWaitGroup, ManualWaitGroup, SmartWaitGroup};
 
 const ATTEMPTS: usize = 100; // number of attempts for searching deadlocks
 const THREADS_NUMBER: usize = 100;

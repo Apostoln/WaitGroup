@@ -1,11 +1,10 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicIsize, Ordering};
-use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
 use std::thread;
 
-use wait_group::{SmartWaitGroup, Doer, Waiter};
+use wait_group::{Doer, SmartWaitGroup};
 
-fn process_counter(counter: Arc<AtomicIsize>, doer: Doer) {
+fn process_counter(counter: Arc<AtomicIsize>, _doer: Doer) {
     counter.fetch_add(1, Ordering::SeqCst);
     //drop(doer) implicit call
 }

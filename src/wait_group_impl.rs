@@ -74,7 +74,7 @@ impl WaitGroupImpl {
             self.condition.notify_all();
         }
     }
-    
+
     pub fn counter(&self) -> usize {
         *self.counter.lock().unwrap()
     }

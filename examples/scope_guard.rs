@@ -1,13 +1,12 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicIsize, Ordering};
-use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
 use std::thread;
 
 use wait_group::GuardWaitGroup;
 
-fn process_counter(counter: Arc<AtomicIsize>, wg: GuardWaitGroup) {
+fn process_counter(counter: Arc<AtomicIsize>, _wg: GuardWaitGroup) {
     counter.fetch_add(1, Ordering::SeqCst);
-    //drop(wg) implicit call
+    //drop(_wg) implicit call
 }
 
 fn main() {

@@ -94,8 +94,7 @@ impl Doer {
     fn unique(wait_group: Arc<WaitGroupImpl>) -> Option<Self> {
         if wait_group.increment_if_empty() {
             Some(Doer { wait_group })
-        }
-        else {
+        } else {
             None
         }
     }
