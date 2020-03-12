@@ -3,13 +3,13 @@ use crate::Result;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct GoWaitGroup {
+pub struct ManualWaitGroup {
     inner: Arc<WaitGroupImpl>,
 }
 
-impl GoWaitGroup {
+impl ManualWaitGroup {
     pub fn new() -> Self {
-        GoWaitGroup {
+        ManualWaitGroup {
             inner: Arc::new(WaitGroupImpl::new()),
         }
     }

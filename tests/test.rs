@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Arc;
 use std::thread;
-use wait_group::{GoWaitGroup, SmartWaitGroup, WaitGroup};
+use wait_group::{ManualWaitGroup, SmartWaitGroup, GuardWaitGroup};
 
 const ATTEMPTS: usize = 100; // number of attempts for searching deadlocks
 const THREADS_NUMBER: usize = 100;
@@ -15,7 +15,7 @@ fn wait_group() {
     for _ in 0..ATTEMPTS {
         let counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
 
-        let wg = WaitGroup::new();
+        let wg = GuardWaitGroup::new();
 
         // Spawn N threads and increment the counter
         let thread_handlers = (0..THREADS_NUMBER)
@@ -83,11 +83,11 @@ fn smart_wg() {
 }
 
 #[test]
-fn go_wg() {
+fn manual_wg() {
     for _ in 0..ATTEMPTS {
         let counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
 
-        let wg = GoWaitGroup::new();
+        let wg = ManualWaitGroup::new();
         wg.add(THREADS_NUMBER as isize);
         // Spawn N threads and set flag to false;
         let thread_handlers = (0..THREADS_NUMBER)
@@ -117,10 +117,10 @@ fn go_wg() {
 
 #[test]
 #[should_panic]
-fn go_wg_negative_counter() {
+fn manual_wg_negative_counter() {
     for _ in 0..ATTEMPTS {
         let counter = Arc::new(AtomicI32::new(INITIAL_VALUE));
-        let wg = GoWaitGroup::new();
+        let wg = ManualWaitGroup::new();
         wg.add(INCORRECT_THREADS_NUMBER as isize);
         // Spawn N threads and set flag to false;
         let thread_handlers = (0..THREADS_NUMBER)

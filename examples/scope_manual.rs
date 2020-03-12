@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::atomic::Ordering::SeqCst;
 use std::thread;
 
-use wait_group::GoWaitGroup;
+use wait_group::ManualWaitGroup;
 
-fn process_counter(counter: Arc<AtomicIsize>, wg: GoWaitGroup) {
+fn process_counter(counter: Arc<AtomicIsize>, wg: ManualWaitGroup) {
     counter.fetch_add(1, Ordering::SeqCst);
     wg.done();
 }
@@ -13,7 +13,7 @@ fn process_counter(counter: Arc<AtomicIsize>, wg: GoWaitGroup) {
 fn main() {
     let counter = Arc::new(AtomicIsize::new(0));
 
-    let wg = GoWaitGroup::new();
+    let wg = ManualWaitGroup::new();
     wg.add(100);
 
     // Spawn 100 threads and set flag to false;
