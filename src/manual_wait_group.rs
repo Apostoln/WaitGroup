@@ -28,6 +28,11 @@ impl ManualWaitGroup {
     }
 
     #[must_use]
+    pub fn add_if_empty(&self, delta: usize) -> bool {
+        self.inner.add_if_empty(delta)
+    }
+
+    #[must_use]
     pub fn try_done(&self) -> Result<()> {
         self.inner.try_done()
     }
@@ -43,6 +48,4 @@ impl ManualWaitGroup {
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }
-
-    //todo add analogue for unique_doer() in SmartWaitGroup
 }

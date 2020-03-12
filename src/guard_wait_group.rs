@@ -22,6 +22,17 @@ impl GuardWaitGroup {
         self.inner.counter()
     }
 
+    pub fn clone_unique(&self) -> Option<Self> {
+        if self.inner.increment_if_empty() {
+            Some(GuardWaitGroup {
+                inner: Arc::clone(&self.inner),
+            })
+        }
+        else {
+            None
+        }
+    }
+
     fn increment_counter(&self) {
         self.inner.increment();
     }
@@ -33,9 +44,6 @@ impl GuardWaitGroup {
     unsafe fn inner(&self) -> Arc<WaitGroupImpl> {
         Arc::clone(&self.inner)
     }
-
-    //todo add analogue for unique_doer() in SmartWaitGroup
-    //todo smth like `pub fn clone_unique(&self) -> Option(Self)`
 }
 
 impl Clone for GuardWaitGroup {
