@@ -24,7 +24,7 @@ impl ManualWaitGroup {
     }
 
     pub fn add(&self, delta: isize) {
-        self.try_add(delta).unwrap();
+        self.inner.add(delta);
     }
 
     #[must_use]
@@ -38,7 +38,7 @@ impl ManualWaitGroup {
     }
 
     pub fn done(&self) {
-        self.try_done().unwrap();
+        self.inner.done();
     }
 
     pub fn counter(&self) -> usize {
