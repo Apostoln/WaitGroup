@@ -35,9 +35,8 @@ fn task(c: Arc<Context>) {
     normal_task(Arc::clone(&c), normal_doer);
 
     if c.resource_counter.load(Ordering::SeqCst) >= 60 {
-        if let Some(special_doer) = c.special_wg.switch_unique(&c.normal_wg) {
-            special_task(Arc::clone(&c), special_doer);
-        }
+        let special_doer = c.special_wg.switch_do_wait(&c.normal_wg);
+        special_task(Arc::clone(&c), special_doer);
     }
 }
 

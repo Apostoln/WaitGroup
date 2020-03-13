@@ -31,13 +31,14 @@ fn special_task(c: Arc<Context>, _special_doer: Doer) {
 }
 
 fn task(c: Arc<Context>) {
-    let normal_doer = c.normal_wg.switch_wait_do(&c.special_wg);
+    c.special_wg.waiter().wait();
+    let normal_doer = c.normal_wg.doer();
     normal_task(Arc::clone(&c), normal_doer);
 
     if c.resource_counter.load(Ordering::SeqCst) >= 60 {
-        if let Some(special_doer) = c.special_wg.switch_unique(&c.normal_wg) {
-            special_task(Arc::clone(&c), special_doer);
-        }
+        let special_doer = c.special_wg.doer();
+        c.normal_wg.waiter().wait();
+        special_task(Arc::clone(&c), special_doer);
     }
 }
 
