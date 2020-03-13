@@ -43,12 +43,20 @@ impl SmartWaitGroup {
     }
 
     pub fn switch_do_wait(&self, second: &SmartWaitGroup) -> Doer {
+        // Ensure that first and second are differ (not an identical allocations)
+        // for avoiding deadlock
+        assert!(!Arc::ptr_eq(&self.inner, &second.inner));
+
         let doer = self.doer();
         second.waiter().wait();
         doer
     }
 
     pub fn switch_wait_do(&self, second: &SmartWaitGroup) -> Doer {
+        // Ensure that first and second are differ (not an identical allocations)
+        // for avoiding deadlock
+        assert!(!Arc::ptr_eq(&self.inner, &second.inner));
+
         second.waiter().wait();
         let doer = self.doer();
         doer
