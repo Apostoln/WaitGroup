@@ -588,11 +588,314 @@ pub fn wait(self);
 Они идеально подходят для случая, когда главный поток должен ждать завершения "вспомогательных" внутри скоупа или тредпула, но случаев использования применения `WaitGroup` намного больше. Рассмотрим их далее.
 
 
-
 # Сложный пример
-Ебать колотить как я заебался это писать
+
+Допустим, у нас есть тредпул, в который мы спавним задачи.
+
+```Rust
+fn main() {  
+	let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();  
+	let context = Arc::new(Context::new());  
+	pool.scope( |s| {  
+		for _ in 0..100 {  
+		        let context = context.clone();  
+			s.spawn(|_| task(context));  
+		}  
+	});
+	println!("{}", context.resource_counter.load(Ordering::SeqCst));  
+}
+
+```
+
+Задачи есть двух видов - `normal_task` и `special_task`. `normal_task` инкрементирует счетчик ресурсов, и если он стал равен 60, вызывает `special_task`, которая счетчик ресурсов обнуляет.  Можно представить, что `normal_task` заполняет ресурс, а `special_task`  выполняет нечто вроде сборки мусора, и потом обнуляет счетчик ресурсов.
+
+```Rust
+fn task(c: Arc<Context>) {  
+	normal_task(c);  
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+		special_task(c, doer);  
+	}   
+}
+
+fn normal_task(c: Arc<Context>) {    
+	// Некоторая полезная работа 
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+}  
+  
+fn special_task(c: Arc<Context>) {  
+	// Некоторая полезная работа 
+	c.resource_counter.store(0, Ordering::SeqCst);  
+}
+```
+
+Нужно добится выполнения следующих инвариантов:
+1. Если в данный момент нет `special_task`, то все `normal_task` должны исполняться параллельно.
+2. Исполнение `special_task` должно быть уникальным. Т.е., если в данный момент есть `special_task`, то в это время не должны исполняться `normal_task`. А именно:
+2.1. Если в момент начала `special_task` выполняются другие `normal_task`, необходимо дождаться их завершения.
+2.2. Если выполнение `special_task` уже началось, другие `normal_task` не должны начинать свое выполнение.
+
+Заведем две вейтгруппы, каждая из которых логически связанна со своей задачей.
+```Rust
+struct Context {  
+	resource_counter: AtomicUsize,  
+	normal_wg: SmartWaitGroup,  
+	special_wg: SmartWaitGroup,
+}
+```
+
+И решим проблему так:
+```rust
+fn normal_task(c: Arc<Context>, _normal_doer: Doer) {  
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+	// Неявный drop(_normal_doer) вызовет _normal_doer.done() 
+}  
+  
+fn special_task(c: Arc<Context>, _special_doer: Doer) {  
+	c.resource_counter.store(0, Ordering::SeqCst);  
+	// Неявный drop(_special_doer) вызовет _special_doer.done() 
+}  
+  
+fn task(c: Arc<Context>) {  
+	c.special_wg.waiter().wait(); // Ожидаем окончания special_task
+	let normal_doer = c.normal_wg.doer(); // Начинаем выполнение normal_task
+	normal_task(Arc::clone(&c), normal_doer);  
+   
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+	        let special_doer = c.special_wg.doer(); // Начинаем выполнение special_task
+		c.normal_wg.waiter().wait(); // Ожидаем окончания normal_task
+		special_task(Arc::clone(&c), special_doer);  
+	}  
+}
+```
+
+Таким образом, у нас получаются две взаимно-исключающие вейтгруппы. Когда одна группа делает wait(), другая должна создавать doer(), и наоборот.
+Обратите внимание на порядок - перед normal_task мы сначала `special_wg.wait()`, а потом `normal_wg.doer()`. Перед `special_task` наоборот - сначала `special_wg.doer()`, а потом `normal_wg.wait()`. Если мы изменим порядок, получим ошибку - либо дедлок, либо неверный порядок выполнения (`special_task` выполнится только когда все `normal_task` закончат работу, а не когда счетчик ресурса станет 60).
+
+Этот паттерн с "переключением" двух логически связанных вейтгрупп довольно часто будет встречаться в реальном коде. Поэтому, в `SmartWaitGroup` уже есть методы, которые делают такую логику. Перепишем пример с их помощью:
+
+```Rust
+fn normal_task(c: Arc<Context>, _normal_doer: Doer) {  
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+}  
+  
+fn special_task(c: Arc<Context>, _special_doer: Doer) {  
+	c.resource_counter.store(0, Ordering::SeqCst);  
+}  
+  
+fn task(c: Arc<Context>) {  
+	let normal_doer = c.normal_wg.switch_wait_do(&c.special_wg); 
+	normal_task(Arc::clone(&c), normal_doer);  
+	
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+	        let special_doer = c.special_wg.switch_do_wait(&c.normal_wg);  
+		special_task(Arc::clone(&c), special_doer);  
+	}  
+}
+```
+Этот код работает точно так же, как и предыдущий, только логика с "переключением" вейтгрупп вынесена в отдельные методы. Они выглядят, условно, так:
+```Rust
+pub fn switch_do_wait(&self, second: &SmartWaitGroup) -> Doer {  
+	let doer = self.doer();  
+	second.waiter().wait();  
+	doer  
+}  
+  
+pub fn switch_wait_do(&self, second: &SmartWaitGroup) -> Doer {  
+	second.waiter().wait();  
+	let doer = self.doer();  
+	doer  
+}  
+  
+pub fn switch(&self, second: &SmartWaitGroup, order: Order) -> Doer {  
+	match order {  
+		Order::DoerWaiter => self.switch_do_wait(second),  
+		Order::WaiterDoer => self.switch_wait_do(second),  
+	}  
+}
+```
+## Дополнительное условие
+В рассмотренной нами задачи мы не упомянули еще два инварианта. Они звучат так:
+1. Только одна `special_task` может выполняться в момент времени.
+1. `special_task` должна выполняться только в том случае, если условие resource_counter >= 60 соблюдается.
+
+Это значит, что сейчас мы может иметь на исполнении две `special_task`. При чем, даже если мы защитим код внутри нее с помощью критической секции (мутексом, например), это будет означать возможность невалидной ситуации. А именно: Запущены две `special_task`. Первая из них выполняется, вторая ожидает захвата мутекса. Первая обнулила счетчик и закончила выполнение. Вторая захватила мутекс и начала свое выполнение. Однако, в этот момент счетчик уже 0, его нет необходимости обнулять еще раз (А, как мы помним, подразумевается что `special_task` кроме этого делает еще некую полезную работу, которую второй раз уже делать бессмысленно).
+
+Выполним эти инварианты, с помощью метода `unique_doer()` вместо `doer()`, который вернет `Some(Doer)`, только если внутренний счетчик `SmartWaitGroup` равен нулю (т.е. никто больше не выполняет задачу на этой `SmartWaitGroup`), а иначе вернет `None`.
+Реализация `unique_doer()`:
+
+```rust
+// impl SmartWaitGroup
+pub fn unique_doer(&self) -> Option<Doer> {  
+	Doer::unique(Arc::clone(&self.inner))  
+}
+
+// impl Doer
+fn unique(wait_group: Arc<WaitGroupImpl>) -> Option<Self> {  
+	if wait_group.increment_if_empty() {  
+	        Some(Doer { wait_group })  
+	} else {  
+		None  
+	}  
+}
+```
+
+И его использование
+
+```Rust
+fn normal_task(c: Arc<Context>, _normal_doer: Doer) {  
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+}  
+  
+fn special_task(c: Arc<Context>, _special_doer: Doer) {  
+	c.resource_counter.store(0, Ordering::SeqCst);  
+}  
+  
+fn task(c: Arc<Context>) {  
+	let normal_doer = c.normal_wg.switch_wait_do(&c.special_wg); 
+	normal_task(Arc::clone(&c), normal_doer);  
+	
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+		if let Some(special_doer) = c.special_wg.unique_doer() {  
+			c.normal_wg.waiter().wait();  
+			special_task(Arc::clone(&c), special_doer);  
+		}
+	}  
+}
+```
 
 
+Только теперь мы опять явно вызывает `unique_doer()` и `waiter()`. Не вопрос, есть метод `switch_unique()`.
+```rust
+pub fn switch_unique(&self, second: &SmartWaitGroup) -> Option<Doer> {  
+	let doer = self.unique_doer();  
+	if let Some(_) = doer {  
+	        second.waiter().wait();  
+	}  
+	doer  
+}
+```
+
+C его помощью финальный вариант решения  этой задачи выглядит так:
+
+```Rust
+use wait_group::{Doer, SmartWaitGroup};  
+
+struct Context {  
+	resource_counter: AtomicUsize,  
+	normal_wg: SmartWaitGroup, //WaitGroup for normal task  
+	special_wg: SmartWaitGroup, //WaitGroup for special task  
+}  
+impl Context {  
+	fn new() -> Self {  
+		Context {  
+			resource_counter: AtomicUsize::new(0),  
+			normal_wg: SmartWaitGroup::new(),  
+			special_wg: SmartWaitGroup::new(),  
+		}  
+	}  
+}  
+  
+fn normal_task(c: Arc<Context>, _normal_doer: Doer) {  
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+}  
+  
+  
+fn special_task(c: Arc<Context>, _special_doer: Doer) {  
+	c.resource_counter.store(0, Ordering::SeqCst);  
+}  
+  
+fn task(c: Arc<Context>) {  
+	let normal_doer = c.normal_wg.switch_wait_do(&c.special_wg);  
+	normal_task(Arc::clone(&c), normal_doer);  
+  
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+	        if let Some(special_doer) = c.special_wg.switch_unique(&c.normal_wg) {  
+	            special_task(Arc::clone(&c), special_doer);  
+		}  
+	}  
+}  
+  
+fn main() {  
+	let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();  
+	let context = Arc::new(Context::new());  
+	pool.scope( |s| {  
+	        for _ in 0..100 {  
+		        let context = context.clone();  
+			s.spawn(|_| task(context));  
+		}  
+	});  
+	println!("{}", context.resource_counter.load(Ordering::SeqCst));  
+}
+```
+
+Мы так же можем  избавиться от `rayon::ThreadPool::scope`, добавив в `Context` еще одну вейтгруппу, как в самом первом примере. Я этого не сделал, чтобы акцентировать внимание на работе с `normal_wg` и `special_wg`.
+
+
+# Какие есть проблемы?
+- К сожалению, пользователю этой структуры необходимо самому следить за тем, где вызвать `switch_do_wait()`, а где `switch_wait_do()`, чтобы не получить дедлок. К сожалению, я не вижу вариантов, как гарантировать отсутствие дедлока здесь на уровне интерфейса SmartWaitGroup.
+- Если мы посмотрим на сигнатуры наших задач в последнем примере 
+	```Rust
+	fn normal_task(c: Arc<Context>, _normal_doer: Doer);
+	fn special_task(c: Arc<Context>, _special_doer: Doer);
+	```
+	То увидим, что они оба принимают Doer. Однако мы можем ошибиться, и указать экземпляр Doer, который относиться к "чужой" вейтгруппе, например
+	```Rust 
+	normal_task(c, c.special_wg.doer();
+	```
+	Хотелось бы избежать этого и на уровне компиляции гарантировать, что `Doer`ы разных вейтгрупп - это разные типы. К сожалению, я слабо представляю, как это сделать.
+
+-  Хотелось бы иметь некоторую `MultiWaitGroup`, которая инкапсулировала бы связанные между собой отдельные вейтгруппы, типа `normal_wg` и `special_wg`, как в последнем примере. Т.е. нечто с подобным интерфейсом:
+```Rust
+enum Case {  
+	Normal,  
+	Special,  
+}  
+  
+struct Context {  
+	resource_counter: AtomicUsize,  
+	wg: MultiWaitGroup<Case>,  
+}  
+impl Context {  
+	fn new() -> Self {  
+		Context {  
+			resource_counter: AtomicUsize::new(0),  
+			wg: MultiWaitGroup::<Case>::new(),  
+		}  
+	}  
+}  
+  
+fn normal_task(c: Arc<Context>, _normal_doer: Doer<Case::Normal>) {  
+	c.resource_counter.fetch_add(1, Ordering::SeqCst);  
+}  
+  
+fn special_task(c: Arc<Context>, _special_doer: Doer<Case::Special>) {  
+	c.resource_counter.store(0, Ordering::SeqCst);  
+}  
+  
+fn task(c: Arc<Context>) {  
+	let doer: Doer<Case::Normal> = wg.switch_wait_do(Case::Normal, Case::Special);  
+	normal_task(Arc::clone(&c), doer);  
+
+	if c.resource_counter.load(Ordering::SeqCst) >= 60 {  
+	        if let Some(doer /*Doer<Case::Special>*/) = c.wg.switch_unique(Case::Special, Case::Normal) {  
+			special_task(Arc::clone(&c), doer);  
+		}  
+	}  
+}  
+  
+fn main() {  
+	let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();  
+	let context = Arc::new(Context::new());  
+	pool.scope( |s| {  
+	        for _ in 0..100 {  
+			let context = context.clone();  
+			s.spawn(|_| task(context));  
+		}  
+	});  
+	println!("{}", context.resource_counter.load(Ordering::SeqCst));  
+}
+```
+ 
 # Нерешенные проблемы
 - Как красиво назвать все эти структуры и методы?
 - Как сделать WaitGroupImpl без использования Mutex и Condvar, т.е. без обращений к ОС?
