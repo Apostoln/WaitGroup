@@ -15,7 +15,7 @@ fn main() {
     let wg = ManualWaitGroup::new();
     wg.add(100);
 
-    // Spawn 100 threads and set flag to false;
+    // Spawn 100 threads and process the counter
     for _ in 0..100 {
         let wg = wg.clone();
         let counter = Arc::clone(&counter);
