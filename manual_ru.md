@@ -1,5 +1,3 @@
-The English version of this manual will be later.
-
 # WaitGroup в языке Go
 В языке Go есть такой примитив синхронизации, как [WaitGroup](https://golang.org/pkg/sync/#WaitGroup). Он позволяет описывать, каким образом одна из горутин (легковесный поток) должна ожидать выполнение других, чтобы продолжить свою работу. 
 
